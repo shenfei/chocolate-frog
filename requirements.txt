@@ -1,0 +1,2 @@
+py-trello==0.4.3
+requests==2.8.1
