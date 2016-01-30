@@ -40,7 +40,8 @@ def get_doing_cards(client, board_id, doing_lists, dev_members):
             except:
                 begin_date = card.create_date
             lasting_time = datetime.today() - begin_date.replace(tzinfo=None)
-            doing_cards.append((card.name, members, lasting_time.days))
+            url = str(card.url)
+            doing_cards.append((card.name, url, members, lasting_time.days))
     return doing_cards
 
 
@@ -61,7 +62,7 @@ def get_done_cards(client, board_id, done_lists, dev_members, date_range):
                 continue
             members = [dev_members.get(m_id, None) for m_id in card.member_id]
             members = filter(None, members)
-            done_cards.append((card.name, members))
+            done_cards.append((card.name, str(card.url), members))
     return done_cards
 
 
@@ -78,6 +79,7 @@ def get_done_checklist(client, board_id, doing_lists, done_lists,
             if not card.checklists:
                 continue
             card.fetch_actions('updateCheckItemStateOnCard')
+            card_url = str(card.url)
             for action in card.actions:
                 check_time = time_parse(action['date']).replace(tzinfo=None)
                 if not (date_range[0] <= check_time <= date_range[1]):
@@ -86,7 +88,7 @@ def get_done_checklist(client, board_id, doing_lists, done_lists,
                 if not member:
                     continue
                 check_item = action['data']['checkItem']['name'].encode('utf8')
-                done_check_items.append((check_item, member))
+                done_check_items.append((check_item, card_url, member))
     return done_check_items
 
 
@@ -102,18 +104,18 @@ def generate_weekly_report(day=datetime.today()):
     report_text = '**上周工作情况:**\n----------\n'
 
     report_text += '\n**上周完成的卡片:**\n'
-    for card_name, members in done_cards:
+    for name, url, members in done_cards:
         member_str = '' if not members else ", ".join(members)
-        report_text += '- %s, 参与人: %s\n' % (card_name, member_str)
+        report_text += '- [%s](%s), 参与人: %s\n' % (name, url, member_str)
 
     report_text += '\n**上周完成的事项:**\n'
-    for check_item, member in done_check_items:
-        report_text += '- %s, 参与人: %s\n' % (check_item, member)
+    for check_item, url, member in done_check_items:
+        report_text += '- [%s](%s), 参与人: %s\n' % (check_item, url, member)
 
     report_text += '\n**正在进行的卡片:**\n'
-    for card_name, members, lasting_days in doing_cards:
+    for name, url, members, lasting_days in doing_cards:
         member_str = '' if not members else ", ".join(members)
-        line = '- %s, 参与人: %s, 已持续天数 %s\n'
-        report_text += line % (card_name, member_str, lasting_days)
+        line = '- [%s](%s), 参与人: %s, 已持续天数 %s\n'
+        report_text += line % (name, url, member_str, lasting_days)
 
     return report_text

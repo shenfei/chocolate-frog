@@ -18,4 +18,7 @@ DOING_LISTS = ['doing_list_id']
 DONE_LISTS = ['done_list_id']
 
 bearychat_url = 'https://your_hook_url'
-bearychat_channels = ['your_channel_name']
+bearychat_channels = {
+    'debug':'your_debug_channel_name',
+    'notice':'your_notice_channel_name'
+}
