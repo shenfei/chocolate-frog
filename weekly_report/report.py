@@ -84,6 +84,9 @@ def get_done_checklist(client, board_id, doing_lists, done_lists,
                 check_time = time_parse(action['date']).replace(tzinfo=None)
                 if not (date_range[0] <= check_time <= date_range[1]):
                     continue
+                # insure the current state is complete
+                if str(action['data']['checkItem']['state']) != 'complete':
+                    continue
                 member = dev_members.get(action['idMemberCreator'], None)
                 if not member:
                     continue
