@@ -3,6 +3,7 @@
 from __future__ import absolute_import
 from datetime import datetime, timedelta
 from dateutil.parser import parse as time_parse
+from pytz import reference
 
 from trello import TrelloClient
 
@@ -25,6 +26,12 @@ def get_trello_client(config):
                         token=oauth_token, token_secret=oauth_token_secret)
 
 
+def convert_to_local_time(time):
+    local_tz = reference.LocalTimezone()
+    time = time.astimezone(local_tz)
+    return time.replace(tzinfo=None)
+
+
 def get_doing_cards(client, board_id, doing_lists, dev_members):
     board = client.get_board(board_id)
     doing_cards = []
@@ -39,7 +46,8 @@ def get_doing_cards(client, board_id, doing_lists, dev_members):
                 begin_date = card.latestCardMove_date
             except:
                 begin_date = card.create_date
-            lasting_time = datetime.today() - begin_date.replace(tzinfo=None)
+            begin_date = convert_to_local_time(begin_date)
+            lasting_time = datetime.today() - begin_date
             url = str(card.url)
             doing_cards.append((card.name, url, members, lasting_time.days))
     return doing_cards
@@ -57,8 +65,8 @@ def get_done_cards(client, board_id, done_lists, dev_members, date_range):
                 done_date = card.latestCardMove_date
             except:
                 continue
-            done_date = done_date.replace(tzinfo=None)
-            if not (date_range[0] <= done_date <= date_range[1]):
+            done_date = convert_to_local_time(done_date)
+            if not (date_range[0] <= done_date.date() <= date_range[1]):
                 continue
             members = [dev_members.get(m_id, None) for m_id in card.member_id]
             members = filter(None, members)
@@ -81,8 +89,9 @@ def get_done_checklist(client, board_id, doing_lists, done_lists,
             card.fetch_actions('updateCheckItemStateOnCard')
             card_url = str(card.url)
             for action in card.actions:
-                check_time = time_parse(action['date']).replace(tzinfo=None)
-                if not (date_range[0] <= check_time <= date_range[1]):
+                check_time = time_parse(action['date'])
+                check_time = convert_to_local_time(check_time)
+                if not (date_range[0] <= check_time.date() <= date_range[1]):
                     continue
                 # insure the current state is complete
                 if str(action['data']['checkItem']['state']) != 'complete':
@@ -96,7 +105,10 @@ def get_done_checklist(client, board_id, doing_lists, done_lists,
 
 
 def generate_weekly_report(day=datetime.today()):
-    date_range = (day - timedelta(days=7), day - timedelta(days=1))
+    date_begin = (day - timedelta(days=7)).date()
+    date_end = (day - timedelta(days=1)).date()
+    date_range = (date_begin, date_end)
+
     client = get_trello_client(TRELLO_CONFIG)
     done_cards = get_done_cards(client, BOARD_ID, DONE_LISTS,
                                 DEV_MEMBERS, date_range)
